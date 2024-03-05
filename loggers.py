@@ -3,6 +3,7 @@ import wandb
 import pytz
 from datetime import datetime
 import pandas as pd
+from pathlib import Path
 
 
 class WandBLogger:
@@ -10,7 +11,8 @@ class WandBLogger:
 
     def __init__(self, args, system_prompt):
         self.logger = wandb.init(
-            project = "jailbreak-llms",
+            project = "jb-test-pair",
+            name = args.wandb_run_name,
             config = {
                 "attack_model" : args.attack_model,
                 "target_model" : args.target_model,
@@ -18,7 +20,6 @@ class WandBLogger:
                 "keep_last_n": args.keep_last_n,
                 "system_prompt": system_prompt,
                 "index": args.index,
-                "category": args.category,
                 "goal": args.goal,
                 "n_iter": args.n_iterations,
                 "target_str": args.target_str,
@@ -34,6 +35,7 @@ class WandBLogger:
         self.goal = args.goal
         self.jailbreak_prompt = None
         self.jailbreak_response = None
+        self.output_file = args.output_file
 
     def log(self, iteration: int, attack_list: list, response_list: list, judge_scores: list):
         
@@ -65,6 +67,12 @@ class WandBLogger:
             "data": wandb.Table(data = self.table)})
 
         self.print_summary_stats(iteration)
+        self.log_table_to_file()
+
+    def log_table_to_file(self):
+        Path(self.output_file).parent.mkdir(parents=True, exist_ok=True)
+        # output self.table to jsonlines
+        self.table.to_json(self.output_file, lines=True, orient='records')
 
     def finish(self):
         self.print_final_summary_stats()
